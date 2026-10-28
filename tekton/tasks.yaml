@@ -99,13 +99,20 @@ spec:
   workspaces:
     - name: source
   steps:
-    - name: deploy
+    - name: apply
       image: registry.k8s.io/kubectl:v1.34.1
       workingDir: $(workspaces.source.path)/repo
-      script: |
-        #!/bin/sh
-        set -eu
-        kubectl apply -f k8s/accounts.yaml
-        kubectl set image deployment/accounts accounts="$(params.image)"
-        kubectl rollout status deployment/accounts --timeout=180s
-        kubectl get deployment,pods,replicaset,service -l app=accounts
+      command: [kubectl]
+      args: [apply, -f, k8s/accounts.yaml]
+    - name: set-image
+      image: registry.k8s.io/kubectl:v1.34.1
+      command: [kubectl]
+      args: [set, image, deployment/accounts, "accounts=$(params.image)"]
+    - name: rollout
+      image: registry.k8s.io/kubectl:v1.34.1
+      command: [kubectl]
+      args: [rollout, status, deployment/accounts, --timeout=180s]
+    - name: verify
+      image: registry.k8s.io/kubectl:v1.34.1
+      command: [kubectl]
+      args: [get, "deployment,pods,replicaset,service"]

@@ -1,0 +1,634 @@
+$ kubectl get pipelinerun accounts-cd-drr2n -o yaml
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  creationTimestamp: "2026-10-28T18:25:03Z"
+  generateName: accounts-cd-
+  generation: 1
+  labels:
+    tekton.dev/pipeline: cd-pipeline
+  name: accounts-cd-drr2n
+  namespace: default
+  resourceVersion: "3349"
+  uid: c4bff9e4-6012-4980-aca0-085b323c5d22
+spec:
+  params:
+  - name: repo-url
+    value: https://github.com/Luun0/devops-capstone-project.git
+  pipelineRef:
+    name: cd-pipeline
+  taskRunTemplate:
+    serviceAccountName: pipeline
+  timeouts:
+    pipeline: 1h0m0s
+  workspaces:
+  - name: source
+    volumeClaimTemplate:
+      metadata:
+        creationTimestamp: null
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 2Gi
+      status: {}
+status:
+  childReferences:
+  - apiVersion: tekton.dev/v1
+    kind: TaskRun
+    name: accounts-cd-drr2n-clone
+    pipelineTaskName: clone
+  - apiVersion: tekton.dev/v1
+    kind: TaskRun
+    name: accounts-cd-drr2n-test
+    pipelineTaskName: test
+  - apiVersion: tekton.dev/v1
+    kind: TaskRun
+    name: accounts-cd-drr2n-build
+    pipelineTaskName: build
+  - apiVersion: tekton.dev/v1
+    kind: TaskRun
+    name: accounts-cd-drr2n-deploy
+    pipelineTaskName: deploy
+  completionTime: "2026-10-28T18:27:36Z"
+  conditions:
+  - lastTransitionTime: "2026-10-28T18:27:36Z"
+    message: 'Tasks Completed: 4 (Failed: 0, Cancelled 0), Skipped: 0'
+    reason: Succeeded
+    status: "True"
+    type: Succeeded
+  pipelineSpec:
+    params:
+    - name: repo-url
+      type: string
+    - default: main
+      name: revision
+      type: string
+    - default: registry:5000/accounts:capstone
+      name: image
+      type: string
+    tasks:
+    - name: clone
+      params:
+      - name: repo-url
+        value: https://github.com/Luun0/devops-capstone-project.git
+      - name: revision
+        value: main
+      taskRef:
+        kind: Task
+        name: clone-source
+      workspaces:
+      - name: source
+        workspace: source
+    - name: test
+      runAfter:
+      - clone
+      taskRef:
+        kind: Task
+        name: lint-and-test
+      workspaces:
+      - name: source
+        workspace: source
+    - name: build
+      params:
+      - name: image
+        value: registry:5000/accounts:capstone
+      runAfter:
+      - test
+      taskRef:
+        kind: Task
+        name: build-image
+      workspaces:
+      - name: source
+        workspace: source
+    - name: deploy
+      params:
+      - name: image
+        value: registry:5000/accounts:capstone
+      runAfter:
+      - build
+      taskRef:
+        kind: Task
+        name: deploy-accounts
+      workspaces:
+      - name: source
+        workspace: source
+    workspaces:
+    - name: source
+  provenance:
+    featureFlags:
+      awaitSidecarReadiness: true
+      coschedule: workspaces
+      enableAPIFields: beta
+      enableProvenanceInStatus: true
+      enforceNonfalsifiability: none
+      maxResultSize: 4096
+      resultExtractionMethod: termination-message
+      runningInEnvWithInjectedSidecars: true
+      verificationNoMatchPolicy: ignore
+  startTime: "2026-10-28T18:25:03Z"
+
+
+$ kubectl logs accounts-cd-drr2n-clone-pod -c prepare
+2026/10/28 18:25:07 Entrypoint initialization
+
+
+$ kubectl logs accounts-cd-drr2n-clone-pod -c place-scripts
+2026/10/28 18:25:08 Decoded script /tekton/scripts/script-0-nzxv7
+
+
+$ kubectl logs accounts-cd-drr2n-clone-pod -c working-dir-initializer
+
+
+$ kubectl logs accounts-cd-drr2n-clone-pod -c step-clone
+Cloning into 'repo'...
+1ebeb24 Run kubectl directly in its distroless image
+
+
+$ kubectl logs accounts-cd-drr2n-test-pod -c prepare
+2026/10/28 18:25:14 Entrypoint initialization
+
+
+$ kubectl logs accounts-cd-drr2n-test-pod -c place-scripts
+2026/10/28 18:25:16 Decoded script /tekton/scripts/script-0-vcbtm
+2026/10/28 18:25:16 Decoded script /tekton/scripts/script-1-v8xsr
+2026/10/28 18:25:16 Decoded script /tekton/scripts/script-2-fb45f
+
+
+$ kubectl logs accounts-cd-drr2n-test-pod -c working-dir-initializer
+
+
+$ kubectl logs accounts-cd-drr2n-test-pod -c step-dependencies
+Collecting Flask==2.2.5
+  Downloading Flask-2.2.5-py3-none-any.whl (101 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 101.8/101.8 kB 969.2 kB/s eta 0:00:00
+Collecting Werkzeug==2.2.3
+  Downloading Werkzeug-2.2.3-py3-none-any.whl (233 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 233.6/233.6 kB 2.4 MB/s eta 0:00:00
+Collecting Flask-SQLAlchemy==2.5.1
+  Downloading Flask_SQLAlchemy-2.5.1-py2.py3-none-any.whl (17 kB)
+Collecting SQLAlchemy==1.4.54
+  Downloading SQLAlchemy-1.4.54-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl (1.6 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.6/1.6 MB 4.7 MB/s eta 0:00:00
+Collecting psycopg2-binary==2.9.10
+  Downloading psycopg2_binary-2.9.10-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl (2.9 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.9/2.9 MB 8.1 MB/s eta 0:00:00
+Collecting python-dotenv==1.0.1
+  Downloading python_dotenv-1.0.1-py3-none-any.whl (19 kB)
+Collecting flask-talisman==1.1.0
+  Downloading flask_talisman-1.1.0-py2.py3-none-any.whl (18 kB)
+Collecting flask-cors==5.0.0
+  Downloading Flask_Cors-5.0.0-py2.py3-none-any.whl (14 kB)
+Collecting gunicorn==23.0.0
+  Downloading gunicorn-23.0.0-py3-none-any.whl (85 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 85.0/85.0 kB 5.7 MB/s eta 0:00:00
+Collecting honcho==1.1.0
+  Downloading honcho-1.1.0-py2.py3-none-any.whl (21 kB)
+Collecting pylint==2.17.7
+  Downloading pylint-2.17.7-py3-none-any.whl (537 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 537.2/537.2 kB 2.4 MB/s eta 0:00:00
+Collecting flake8==7.1.2
+  Downloading flake8-7.1.2-py2.py3-none-any.whl (57 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 57.7/57.7 kB 4.7 MB/s eta 0:00:00
+Collecting black==24.8.0
+  Downloading black-24.8.0-py3-none-any.whl (206 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 206.5/206.5 kB 5.2 MB/s eta 0:00:00
+Collecting nose==1.3.7
+  Downloading nose-1.3.7-py3-none-any.whl (154 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 154.7/154.7 kB 5.6 MB/s eta 0:00:00
+Collecting pinocchio==0.4.3
+  Downloading pinocchio-0.4.3-py3-none-any.whl (12 kB)
+Collecting factory-boy==3.3.1
+  Downloading factory_boy-3.3.1-py2.py3-none-any.whl (36 kB)
+Collecting coverage==7.6.1
+  Downloading coverage-7.6.1-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl (235 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 235.2/235.2 kB 4.0 MB/s eta 0:00:00
+Collecting importlib-metadata>=3.6.0
+  Downloading importlib_metadata-8.7.1-py3-none-any.whl (27 kB)
+Collecting Jinja2>=3.0
+  Downloading jinja2-3.1.6-py3-none-any.whl (134 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 134.9/134.9 kB 3.4 MB/s eta 0:00:00
+Collecting click>=8.0
+  Downloading click-8.1.8-py3-none-any.whl (98 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 98.2/98.2 kB 3.6 MB/s eta 0:00:00
+Collecting itsdangerous>=2.0
+  Downloading itsdangerous-2.2.0-py3-none-any.whl (16 kB)
+Collecting MarkupSafe>=2.1.1
+  Downloading markupsafe-3.0.4-cp39-cp39-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl (21 kB)
+Collecting greenlet!=0.4.17
+  Downloading greenlet-3.2.5-cp39-cp39-manylinux2014_aarch64.manylinux_2_17_aarch64.whl (631 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 631.8/631.8 kB 4.4 MB/s eta 0:00:00
+Collecting packaging
+  Downloading packaging-26.3-py3-none-any.whl (129 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 130.0/130.0 kB 6.2 MB/s eta 0:00:00
+Collecting platformdirs>=2.2.0
+  Downloading platformdirs-4.4.0-py3-none-any.whl (18 kB)
+Collecting mccabe<0.8,>=0.6
+  Downloading mccabe-0.7.0-py2.py3-none-any.whl (7.3 kB)
+Collecting tomli>=1.1.0
+  Downloading tomli-2.5.0-py3-none-any.whl (14 kB)
+Collecting typing-extensions>=3.10.0
+  Downloading typing_extensions-4.16.0-py3-none-any.whl (45 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 45.6/45.6 kB 1.6 MB/s eta 0:00:00
+Collecting astroid<=2.17.0-dev0,>=2.15.8
+  Downloading astroid-2.15.8-py3-none-any.whl (278 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 278.3/278.3 kB 5.4 MB/s eta 0:00:00
+Collecting tomlkit>=0.10.1
+  Downloading tomlkit-0.15.2-py3-none-any.whl (52 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 52.2/52.2 kB 4.3 MB/s eta 0:00:00
+Collecting dill>=0.2
+  Downloading dill-0.4.1-py3-none-any.whl (120 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 120.0/120.0 kB 3.7 MB/s eta 0:00:00
+Collecting isort<6,>=4.2.5
+  Downloading isort-5.13.2-py3-none-any.whl (92 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 92.3/92.3 kB 3.2 MB/s eta 0:00:00
+Collecting pyflakes<3.3.0,>=3.2.0
+  Downloading pyflakes-3.2.0-py2.py3-none-any.whl (62 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 62.7/62.7 kB 3.2 MB/s eta 0:00:00
+Collecting pycodestyle<2.13.0,>=2.12.0
+  Downloading pycodestyle-2.12.1-py2.py3-none-any.whl (31 kB)
+Collecting pathspec>=0.9.0
+  Downloading pathspec-1.1.1-py3-none-any.whl (57 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 57.3/57.3 kB 2.1 MB/s eta 0:00:00
+Collecting mypy-extensions>=0.4.3
+  Downloading mypy_extensions-1.1.0-py3-none-any.whl (5.0 kB)
+Collecting colorama
+  Downloading colorama-0.4.6-py2.py3-none-any.whl (25 kB)
+Collecting Faker>=0.7.0
+  Downloading faker-37.12.0-py3-none-any.whl (2.0 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.0/2.0 MB 6.9 MB/s eta 0:00:00
+Collecting wrapt<2,>=1.11
+  Downloading wrapt-1.17.3-cp39-cp39-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl (82 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 82.8/82.8 kB 3.7 MB/s eta 0:00:00
+Collecting lazy-object-proxy>=1.4.0
+  Downloading lazy_object_proxy-1.12.0-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl (66 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 66.8/66.8 kB 3.5 MB/s eta 0:00:00
+Collecting tzdata
+  Downloading tzdata-2026.6-py2.py3-none-any.whl (348 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 348.2/348.2 kB 1.7 MB/s eta 0:00:00
+Collecting zipp>=3.20
+  Downloading zipp-3.23.1-py3-none-any.whl (10 kB)
+Installing collected packages: nose, honcho, flask-talisman, zipp, wrapt, tzdata, typing-extensions, tomlkit, tomli, python-dotenv, pyflakes, pycodestyle, psycopg2-binary, platformdirs, pathspec, packaging, mypy-extensions, mccabe, MarkupSafe, lazy-object-proxy, itsdangerous, isort, greenlet, dill, coverage, colorama, click, Werkzeug, SQLAlchemy, pinocchio, Jinja2, importlib-metadata, gunicorn, flake8, Faker, black, astroid, pylint, Flask, factory-boy, Flask-SQLAlchemy, flask-cors
+Successfully installed Faker-37.12.0 Flask-2.2.5 Flask-SQLAlchemy-2.5.1 Jinja2-3.1.6 MarkupSafe-3.0.4 SQLAlchemy-1.4.54 Werkzeug-2.2.3 astroid-2.15.8 black-24.8.0 click-8.1.8 colorama-0.4.6 coverage-7.6.1 dill-0.4.1 factory-boy-3.3.1 flake8-7.1.2 flask-cors-5.0.0 flask-talisman-1.1.0 greenlet-3.2.5 gunicorn-23.0.0 honcho-1.1.0 importlib-metadata-8.7.1 isort-5.13.2 itsdangerous-2.2.0 lazy-object-proxy-1.12.0 mccabe-0.7.0 mypy-extensions-1.1.0 nose-1.3.7 packaging-26.3 pathspec-1.1.1 pinocchio-0.4.3 platformdirs-4.4.0 psycopg2-binary-2.9.10 pycodestyle-2.12.1 pyflakes-3.2.0 pylint-2.17.7 python-dotenv-1.0.1 tomli-2.5.0 tomlkit-0.15.2 typing-extensions-4.16.0 tzdata-2026.6 wrapt-1.17.3 zipp-3.23.1
+WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv
+
+[notice] A new release of pip is available: 23.0.1 -> 26.0.1
+[notice] To update, run: pip install --upgrade pip
+
+
+$ kubectl logs accounts-cd-drr2n-test-pod -c step-lint
+
+
+$ kubectl logs accounts-cd-drr2n-test-pod -c step-nosetests
+It should call the db-create command ... ok
+It should build a database URI from individual environment values. ... ok
+It should Create an account and add it to the database ... ok
+It should Create an Account and assert that it exists ... ok
+It should Delete an account from the database ... ok
+It should Deserialize an account ... ok
+It should not Deserialize an account with a KeyError ... ok
+It should not Deserialize an account with a TypeError ... ok
+It should Find an Account by name ... ok
+It should List all Accounts in the database ... ok
+It should Read an account ... ok
+It should Serialize an account ... ok
+It should Update an account ... ok
+It should not Create an Account when sending the wrong data ... ok
+It should allow only the configured origin. ... ok
+It should omit permission for an untrusted origin. ... ok
+It should authorize PUT in a preflight request. ... ok
+It should Create a new Account ... ok
+It should set today's date when date_joined is omitted. ... ok
+It should delete persistently and be idempotent. ... ok
+It should filter accounts by exact name. ... ok
+It should be healthy ... ok
+It should get 200_OK from the Home Page ... ok
+It should return 400 for an invalid calendar date. ... ok
+It should list all accounts and support an empty list. ... ok
+It should return a usable Location for newly created accounts. ... ok
+It should return a JSON error for a disallowed method. ... ok
+It should retrieve the created account through its Location. ... ok
+It should return 404 for an unknown account. ... ok
+It should include Talisman response headers. ... ok
+It should not Create an Account when sending the wrong media type ... ok
+It should persist updated fields without changing the ID. ... ok
+It should reject incomplete update data. ... ok
+It should reject updating an unknown account. ... ok
+
+Name                               Stmts   Miss  Cover   Missing
+----------------------------------------------------------------
+service/__init__.py                   23      3    87%   44-47
+service/common/__init__.py             0      0   100%
+service/common/cli_commands.py         7      0   100%
+service/common/error_handlers.py      32      3    91%   76-78
+service/common/log_handlers.py        10      1    90%   21
+service/common/status.py              45      0   100%
+service/config.py                     11      0   100%
+service/models.py                     71      2    97%   32, 98
+service/routes.py                     52      0   100%
+----------------------------------------------------------------
+TOTAL                                251      9    96%
+----------------------------------------------------------------------
+Ran 34 tests in 0.766s
+
+OK
+
+
+$ kubectl logs accounts-cd-drr2n-build-pod -c prepare
+2026/10/28 18:25:53 Entrypoint initialization
+
+
+$ kubectl logs accounts-cd-drr2n-build-pod -c place-scripts
+2026/10/28 18:25:55 Decoded script /tekton/scripts/script-0-l78gh
+
+
+$ kubectl logs accounts-cd-drr2n-build-pod -c working-dir-initializer
+
+
+$ kubectl logs accounts-cd-drr2n-build-pod -c step-build-and-push
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 415B done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/python:3.9-slim
+#2 DONE 2.3s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 77B done
+#3 DONE 0.0s
+
+#4 [internal] load build context
+#4 transferring context: 34.00kB done
+#4 DONE 0.0s
+
+#5 [1/5] FROM docker.io/library/python:3.9-slim@sha256:2d97f6910b16bd338d3060f261f53f144965f755599aab1acda1e13cf1731b1b
+#5 resolve docker.io/library/python:3.9-slim@sha256:2d97f6910b16bd338d3060f261f53f144965f755599aab1acda1e13cf1731b1b 0.0s done
+#5 sha256:9a63e92e90418ee93a722e8cdc7b3b18a9e052c80de8760887338d1c902644eb 5.42kB / 5.42kB done
+#5 sha256:a16e551192670581ec8359c70ab9eebf8f2af5468ffc79b3d4f9ce21b0366f47 0B / 30.14MB 0.1s
+#5 sha256:479b8ad8bcc3edbeba82d4959dfbdc65226d5b55df3f36914c68455762bf924c 0B / 1.27MB 0.1s
+#5 sha256:ebfe7d4fa0c501a81a5ba6d1e1e2958e4b005d3ce3827b0adb869d47b8c51229 0B / 13.83MB 0.1s
+#5 sha256:2d97f6910b16bd338d3060f261f53f144965f755599aab1acda1e13cf1731b1b 10.36kB / 10.36kB done
+#5 sha256:9a863b2cd2ae52d53feefd3af55ea9e3cf911d5fb252ed77a2618402d2703d74 1.75kB / 1.75kB done
+#5 sha256:a16e551192670581ec8359c70ab9eebf8f2af5468ffc79b3d4f9ce21b0366f47 4.19MB / 30.14MB 0.9s
+#5 sha256:a16e551192670581ec8359c70ab9eebf8f2af5468ffc79b3d4f9ce21b0366f47 6.29MB / 30.14MB 1.2s
+#5 sha256:a16e551192670581ec8359c70ab9eebf8f2af5468ffc79b3d4f9ce21b0366f47 8.39MB / 30.14MB 1.4s
+#5 sha256:a16e551192670581ec8359c70ab9eebf8f2af5468ffc79b3d4f9ce21b0366f47 10.49MB / 30.14MB 1.6s
+#5 sha256:ebfe7d4fa0c501a81a5ba6d1e1e2958e4b005d3ce3827b0adb869d47b8c51229 1.05MB / 13.83MB 1.6s
+#5 sha256:a16e551192670581ec8359c70ab9eebf8f2af5468ffc79b3d4f9ce21b0366f47 13.63MB / 30.14MB 1.9s
+#5 sha256:a16e551192670581ec8359c70ab9eebf8f2af5468ffc79b3d4f9ce21b0366f47 15.73MB / 30.14MB 2.2s
+#5 sha256:a16e551192670581ec8359c70ab9eebf8f2af5468ffc79b3d4f9ce21b0366f47 18.87MB / 30.14MB 2.5s
+#5 sha256:ebfe7d4fa0c501a81a5ba6d1e1e2958e4b005d3ce3827b0adb869d47b8c51229 2.10MB / 13.83MB 2.5s
+#5 sha256:a16e551192670581ec8359c70ab9eebf8f2af5468ffc79b3d4f9ce21b0366f47 20.97MB / 30.14MB 2.7s
+#5 sha256:a16e551192670581ec8359c70ab9eebf8f2af5468ffc79b3d4f9ce21b0366f47 23.07MB / 30.14MB 3.0s
+#5 sha256:a16e551192670581ec8359c70ab9eebf8f2af5468ffc79b3d4f9ce21b0366f47 27.26MB / 30.14MB 3.3s
+#5 sha256:479b8ad8bcc3edbeba82d4959dfbdc65226d5b55df3f36914c68455762bf924c 1.05MB / 1.27MB 3.3s
+#5 sha256:ebfe7d4fa0c501a81a5ba6d1e1e2958e4b005d3ce3827b0adb869d47b8c51229 3.15MB / 13.83MB 3.3s
+#5 sha256:479b8ad8bcc3edbeba82d4959dfbdc65226d5b55df3f36914c68455762bf924c 1.27MB / 1.27MB 3.5s done
+#5 sha256:c23f4b50347300e01a1a1da6dd0266adcf8e44671002ad28c2386cb6557943d6 0B / 251B 3.5s
+#5 sha256:a16e551192670581ec8359c70ab9eebf8f2af5468ffc79b3d4f9ce21b0366f47 30.14MB / 30.14MB 3.7s
+#5 sha256:a16e551192670581ec8359c70ab9eebf8f2af5468ffc79b3d4f9ce21b0366f47 30.14MB / 30.14MB 3.7s done
+#5 sha256:c23f4b50347300e01a1a1da6dd0266adcf8e44671002ad28c2386cb6557943d6 251B / 251B 3.7s done
+#5 extracting sha256:a16e551192670581ec8359c70ab9eebf8f2af5468ffc79b3d4f9ce21b0366f47 0.1s
+#5 sha256:ebfe7d4fa0c501a81a5ba6d1e1e2958e4b005d3ce3827b0adb869d47b8c51229 4.19MB / 13.83MB 4.0s
+#5 sha256:ebfe7d4fa0c501a81a5ba6d1e1e2958e4b005d3ce3827b0adb869d47b8c51229 5.24MB / 13.83MB 4.8s
+#5 sha256:ebfe7d4fa0c501a81a5ba6d1e1e2958e4b005d3ce3827b0adb869d47b8c51229 6.29MB / 13.83MB 5.5s
+#5 sha256:ebfe7d4fa0c501a81a5ba6d1e1e2958e4b005d3ce3827b0adb869d47b8c51229 7.34MB / 13.83MB 6.0s
+#5 extracting sha256:a16e551192670581ec8359c70ab9eebf8f2af5468ffc79b3d4f9ce21b0366f47 2.2s done
+#5 extracting sha256:479b8ad8bcc3edbeba82d4959dfbdc65226d5b55df3f36914c68455762bf924c
+#5 extracting sha256:479b8ad8bcc3edbeba82d4959dfbdc65226d5b55df3f36914c68455762bf924c 0.2s done
+#5 sha256:ebfe7d4fa0c501a81a5ba6d1e1e2958e4b005d3ce3827b0adb869d47b8c51229 8.39MB / 13.83MB 6.5s
+#5 sha256:ebfe7d4fa0c501a81a5ba6d1e1e2958e4b005d3ce3827b0adb869d47b8c51229 9.44MB / 13.83MB 6.7s
+#5 sha256:ebfe7d4fa0c501a81a5ba6d1e1e2958e4b005d3ce3827b0adb869d47b8c51229 10.49MB / 13.83MB 7.0s
+#5 sha256:ebfe7d4fa0c501a81a5ba6d1e1e2958e4b005d3ce3827b0adb869d47b8c51229 11.53MB / 13.83MB 7.3s
+#5 sha256:ebfe7d4fa0c501a81a5ba6d1e1e2958e4b005d3ce3827b0adb869d47b8c51229 12.58MB / 13.83MB 7.6s
+#5 sha256:ebfe7d4fa0c501a81a5ba6d1e1e2958e4b005d3ce3827b0adb869d47b8c51229 13.83MB / 13.83MB 7.7s
+#5 sha256:ebfe7d4fa0c501a81a5ba6d1e1e2958e4b005d3ce3827b0adb869d47b8c51229 13.83MB / 13.83MB 7.8s done
+#5 extracting sha256:ebfe7d4fa0c501a81a5ba6d1e1e2958e4b005d3ce3827b0adb869d47b8c51229
+#5 extracting sha256:ebfe7d4fa0c501a81a5ba6d1e1e2958e4b005d3ce3827b0adb869d47b8c51229 1.2s done
+#5 extracting sha256:c23f4b50347300e01a1a1da6dd0266adcf8e44671002ad28c2386cb6557943d6
+#5 extracting sha256:c23f4b50347300e01a1a1da6dd0266adcf8e44671002ad28c2386cb6557943d6 done
+#5 DONE 9.2s
+
+#6 [2/5] WORKDIR /app
+#6 DONE 1.2s
+
+#7 [3/5] COPY requirements.txt .
+#7 DONE 0.0s
+
+#8 [4/5] RUN pip install --no-cache-dir -r requirements.txt && useradd --uid 10001 --create-home appuser
+#8 2.057 Collecting Flask==2.2.5
+#8 2.346   Downloading Flask-2.2.5-py3-none-any.whl (101 kB)
+#8 2.450      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 101.8/101.8 kB 1.3 MB/s eta 0:00:00
+#8 2.626 Collecting Werkzeug==2.2.3
+#8 2.715   Downloading Werkzeug-2.2.3-py3-none-any.whl (233 kB)
+#8 2.805      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 233.6/233.6 kB 2.4 MB/s eta 0:00:00
+#8 2.917 Collecting Flask-SQLAlchemy==2.5.1
+#8 2.996   Downloading Flask_SQLAlchemy-2.5.1-py2.py3-none-any.whl (17 kB)
+#8 4.612 Collecting SQLAlchemy==1.4.54
+#8 4.709   Downloading SQLAlchemy-1.4.54-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl (1.6 MB)
+#8 5.095      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.6/1.6 MB 4.6 MB/s eta 0:00:00
+#8 6.120 Collecting psycopg2-binary==2.9.10
+#8 6.198   Downloading psycopg2_binary-2.9.10-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl (2.9 MB)
+#8 6.548      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.9/2.9 MB 8.3 MB/s eta 0:00:00
+#8 6.658 Collecting python-dotenv==1.0.1
+#8 6.731   Downloading python_dotenv-1.0.1-py3-none-any.whl (19 kB)
+#8 6.851 Collecting flask-talisman==1.1.0
+#8 6.925   Downloading flask_talisman-1.1.0-py2.py3-none-any.whl (18 kB)
+#8 7.042 Collecting flask-cors==5.0.0
+#8 7.117   Downloading Flask_Cors-5.0.0-py2.py3-none-any.whl (14 kB)
+#8 7.265 Collecting gunicorn==23.0.0
+#8 7.350   Downloading gunicorn-23.0.0-py3-none-any.whl (85 kB)
+#8 7.361      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 85.0/85.0 kB 129.3 MB/s eta 0:00:00
+#8 7.464 Collecting honcho==1.1.0
+#8 7.538   Downloading honcho-1.1.0-py2.py3-none-any.whl (21 kB)
+#8 7.686 Collecting pylint==2.17.7
+#8 7.761   Downloading pylint-2.17.7-py3-none-any.whl (537 kB)
+#8 7.841      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 537.2/537.2 kB 6.8 MB/s eta 0:00:00
+#8 7.957 Collecting flake8==7.1.2
+#8 8.032   Downloading flake8-7.1.2-py2.py3-none-any.whl (57 kB)
+#8 8.051      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 57.7/57.7 kB 2.7 MB/s eta 0:00:00
+#8 8.228 Collecting black==24.8.0
+#8 8.304   Downloading black-24.8.0-py3-none-any.whl (206 kB)
+#8 8.328      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 206.5/206.5 kB 12.2 MB/s eta 0:00:00
+#8 8.424 Collecting nose==1.3.7
+#8 8.601   Downloading nose-1.3.7-py3-none-any.whl (154 kB)
+#8 8.603      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 154.7/154.7 kB 281.5 MB/s eta 0:00:00
+#8 8.700 Collecting pinocchio==0.4.3
+#8 8.775   Downloading pinocchio-0.4.3-py3-none-any.whl (12 kB)
+#8 8.964 Collecting factory-boy==3.3.1
+#8 9.039   Downloading factory_boy-3.3.1-py2.py3-none-any.whl (36 kB)
+#8 10.11 Collecting coverage==7.6.1
+#8 10.19   Downloading coverage-7.6.1-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl (235 kB)
+#8 10.21      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 235.2/235.2 kB 10.8 MB/s eta 0:00:00
+#8 10.33 Collecting Jinja2>=3.0
+#8 10.40   Downloading jinja2-3.1.6-py3-none-any.whl (134 kB)
+#8 10.43      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 134.9/134.9 kB 5.6 MB/s eta 0:00:00
+#8 10.53 Collecting click>=8.0
+#8 10.61   Downloading click-8.1.8-py3-none-any.whl (98 kB)
+#8 10.63      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 98.2/98.2 kB 5.1 MB/s eta 0:00:00
+#8 10.75 Collecting importlib-metadata>=3.6.0
+#8 10.83   Downloading importlib_metadata-8.7.1-py3-none-any.whl (27 kB)
+#8 10.94 Collecting itsdangerous>=2.0
+#8 11.01   Downloading itsdangerous-2.2.0-py3-none-any.whl (16 kB)
+#8 11.21 Collecting MarkupSafe>=2.1.1
+#8 11.29   Downloading markupsafe-3.0.4-cp39-cp39-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl (21 kB)
+#8 11.90 Collecting greenlet!=0.4.17
+#8 11.98   Downloading greenlet-3.2.5-cp39-cp39-manylinux2014_aarch64.manylinux_2_17_aarch64.whl (631 kB)
+#8 12.13      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 631.8/631.8 kB 4.3 MB/s eta 0:00:00
+#8 12.26 Collecting packaging
+#8 12.33   Downloading packaging-26.3-py3-none-any.whl (129 kB)
+#8 12.35      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 130.0/130.0 kB 10.2 MB/s eta 0:00:00
+#8 12.47 Collecting typing-extensions>=3.10.0
+#8 12.55   Downloading typing_extensions-4.16.0-py3-none-any.whl (45 kB)
+#8 12.56      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 45.6/45.6 kB 8.5 MB/s eta 0:00:00
+#8 12.69 Collecting tomli>=1.1.0
+#8 12.77   Downloading tomli-2.5.0-py3-none-any.whl (14 kB)
+#8 12.88 Collecting dill>=0.2
+#8 12.95   Downloading dill-0.4.1-py3-none-any.whl (120 kB)
+#8 12.98      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 120.0/120.0 kB 4.2 MB/s eta 0:00:00
+#8 13.16 Collecting tomlkit>=0.10.1
+#8 13.23   Downloading tomlkit-0.15.2-py3-none-any.whl (52 kB)
+#8 13.25      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 52.2/52.2 kB 3.4 MB/s eta 0:00:00
+#8 13.40 Collecting astroid<=2.17.0-dev0,>=2.15.8
+#8 13.48   Downloading astroid-2.15.8-py3-none-any.whl (278 kB)
+#8 13.54      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 278.3/278.3 kB 4.9 MB/s eta 0:00:00
+#8 13.69 Collecting isort<6,>=4.2.5
+#8 13.77   Downloading isort-5.13.2-py3-none-any.whl (92 kB)
+#8 13.79      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 92.3/92.3 kB 5.0 MB/s eta 0:00:00
+#8 13.91 Collecting platformdirs>=2.2.0
+#8 13.98   Downloading platformdirs-4.4.0-py3-none-any.whl (18 kB)
+#8 14.07 Collecting mccabe<0.8,>=0.6
+#8 14.15   Downloading mccabe-0.7.0-py2.py3-none-any.whl (7.3 kB)
+#8 14.27 Collecting pyflakes<3.3.0,>=3.2.0
+#8 14.34   Downloading pyflakes-3.2.0-py2.py3-none-any.whl (62 kB)
+#8 14.36      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 62.7/62.7 kB 3.4 MB/s eta 0:00:00
+#8 14.47 Collecting pycodestyle<2.13.0,>=2.12.0
+#8 14.54   Downloading pycodestyle-2.12.1-py2.py3-none-any.whl (31 kB)
+#8 14.68 Collecting pathspec>=0.9.0
+#8 14.76   Downloading pathspec-1.1.1-py3-none-any.whl (57 kB)
+#8 14.78      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 57.3/57.3 kB 2.5 MB/s eta 0:00:00
+#8 14.88 Collecting mypy-extensions>=0.4.3
+#8 14.95   Downloading mypy_extensions-1.1.0-py3-none-any.whl (5.0 kB)
+#8 15.07 Collecting colorama
+#8 15.15   Downloading colorama-0.4.6-py2.py3-none-any.whl (25 kB)
+#8 15.55 Collecting Faker>=0.7.0
+#8 15.62   Downloading faker-37.12.0-py3-none-any.whl (2.0 MB)
+#8 16.00      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.0/2.0 MB 5.4 MB/s eta 0:00:00
+#8 16.19 Collecting lazy-object-proxy>=1.4.0
+#8 16.26   Downloading lazy_object_proxy-1.12.0-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl (66 kB)
+#8 16.27      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 66.8/66.8 kB 6.8 MB/s eta 0:00:00
+#8 17.82 Collecting wrapt<2,>=1.11
+#8 17.90   Downloading wrapt-1.17.3-cp39-cp39-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl (82 kB)
+#8 17.91      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 82.8/82.8 kB 9.5 MB/s eta 0:00:00
+#8 18.05 Collecting tzdata
+#8 18.13   Downloading tzdata-2026.6-py2.py3-none-any.whl (348 kB)
+#8 18.19      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 348.2/348.2 kB 5.8 MB/s eta 0:00:00
+#8 18.33 Collecting zipp>=3.20
+#8 18.40   Downloading zipp-3.23.1-py3-none-any.whl (10 kB)
+#8 18.63 Installing collected packages: nose, honcho, flask-talisman, zipp, wrapt, tzdata, typing-extensions, tomlkit, tomli, python-dotenv, pyflakes, pycodestyle, psycopg2-binary, platformdirs, pathspec, packaging, mypy-extensions, mccabe, MarkupSafe, lazy-object-proxy, itsdangerous, isort, greenlet, dill, coverage, colorama, click, Werkzeug, SQLAlchemy, pinocchio, Jinja2, importlib-metadata, gunicorn, flake8, Faker, black, astroid, pylint, Flask, factory-boy, Flask-SQLAlchemy, flask-cors
+#8 27.41 Successfully installed Faker-37.12.0 Flask-2.2.5 Flask-SQLAlchemy-2.5.1 Jinja2-3.1.6 MarkupSafe-3.0.4 SQLAlchemy-1.4.54 Werkzeug-2.2.3 astroid-2.15.8 black-24.8.0 click-8.1.8 colorama-0.4.6 coverage-7.6.1 dill-0.4.1 factory-boy-3.3.1 flake8-7.1.2 flask-cors-5.0.0 flask-talisman-1.1.0 greenlet-3.2.5 gunicorn-23.0.0 honcho-1.1.0 importlib-metadata-8.7.1 isort-5.13.2 itsdangerous-2.2.0 lazy-object-proxy-1.12.0 mccabe-0.7.0 mypy-extensions-1.1.0 nose-1.3.7 packaging-26.3 pathspec-1.1.1 pinocchio-0.4.3 platformdirs-4.4.0 psycopg2-binary-2.9.10 pycodestyle-2.12.1 pyflakes-3.2.0 pylint-2.17.7 python-dotenv-1.0.1 tomli-2.5.0 tomlkit-0.15.2 typing-extensions-4.16.0 tzdata-2026.6 wrapt-1.17.3 zipp-3.23.1
+#8 27.41 WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv
+#8 27.77 
+#8 27.77 [notice] A new release of pip is available: 23.0.1 -> 26.0.1
+#8 27.77 [notice] To update, run: pip install --upgrade pip
+#8 DONE 28.8s
+
+#9 [5/5] COPY --chown=appuser:appuser service ./service
+#9 DONE 0.0s
+
+#10 exporting to image
+#10 exporting layers
+#10 exporting layers 0.3s done
+#10 writing image sha256:7ac4b2f8a3ab6e1328ba335c2a8d208229d0cf557614463f3da59fbcd3953478
+#10 writing image sha256:7ac4b2f8a3ab6e1328ba335c2a8d208229d0cf557614463f3da59fbcd3953478 done
+#10 naming to registry:5000/accounts:capstone done
+#10 DONE 0.3s
+The push refers to repository [registry:5000/accounts]
+782b35a03c3d: Preparing
+a7c8f0e8a920: Preparing
+d0f39480bcad: Preparing
+11283891c593: Preparing
+472e8307d021: Preparing
+27fee45b64c8: Preparing
+f58e59ccb600: Preparing
+27d9a8093fcd: Preparing
+f58e59ccb600: Waiting
+27d9a8093fcd: Waiting
+27fee45b64c8: Waiting
+472e8307d021: Layer already exists
+27fee45b64c8: Layer already exists
+f58e59ccb600: Layer already exists
+11283891c593: Pushed
+782b35a03c3d: Pushed
+d0f39480bcad: Pushed
+a7c8f0e8a920: Pushed
+27d9a8093fcd: Pushed
+capstone: digest: sha256:616fb113b74b9466be7774d2e1d6638c5a21cdfcc88ea135de57d698ec187e70 size: 1993
+
+
+$ kubectl logs accounts-cd-drr2n-build-pod -c sidecar-docker
+2026/10/28 18:27:04 Exiting...
+
+
+$ kubectl logs accounts-cd-drr2n-deploy-pod -c prepare
+2026/10/28 18:27:04 Entrypoint initialization
+
+
+$ kubectl logs accounts-cd-drr2n-deploy-pod -c working-dir-initializer
+
+
+$ kubectl logs accounts-cd-drr2n-deploy-pod -c step-apply
+deployment.apps/accounts unchanged
+service/accounts unchanged
+
+
+$ kubectl logs accounts-cd-drr2n-deploy-pod -c step-set-image
+deployment.apps/accounts image updated
+
+
+$ kubectl logs accounts-cd-drr2n-deploy-pod -c step-rollout
+Waiting for deployment "accounts" rollout to finish: 1 out of 2 new replicas have been updated...
+Waiting for deployment "accounts" rollout to finish: 1 out of 2 new replicas have been updated...
+Waiting for deployment "accounts" rollout to finish: 1 out of 2 new replicas have been updated...
+Waiting for deployment "accounts" rollout to finish: 1 old replicas are pending termination...
+Waiting for deployment "accounts" rollout to finish: 1 old replicas are pending termination...
+Waiting for deployment "accounts" rollout to finish: 1 old replicas are pending termination...
+deployment "accounts" successfully rolled out
+
+
+$ kubectl logs accounts-cd-drr2n-deploy-pod -c step-verify
+NAME                       READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/accounts   2/2     2            2           8m51s
+deployment.apps/postgres   1/1     1            1           8m51s
+deployment.apps/registry   1/1     1            1           7m37s
+
+NAME                                  READY   STATUS        RESTARTS        AGE
+pod/accounts-7c794fd8dc-kjm9c         1/1     Terminating   3 (6m33s ago)   8m51s
+pod/accounts-cd-drr2n-build-pod       0/2     Completed     1 (31s ago)     104s
+pod/accounts-cd-drr2n-clone-pod       0/1     Completed     0               2m32s
+pod/accounts-cd-drr2n-deploy-pod      1/4     NotReady      0               33s
+pod/accounts-cd-drr2n-test-pod        0/3     Completed     0               2m22s
+pod/accounts-cd-m4g48-build-pod       0/2     Completed     1 (3m21s ago)   5m3s
+pod/accounts-cd-m4g48-clone-pod       0/1     Completed     0               6m29s
+pod/accounts-cd-m4g48-deploy-pod      0/1     Error         0               3m23s
+pod/accounts-cd-m4g48-test-pod        0/3     Completed     0               5m46s
+pod/accounts-df996458d-d7mm7          1/1     Running       0               25s
+pod/accounts-df996458d-mj7w5          1/1     Running       0               12s
+pod/affinity-assistant-b15f15f4dc-0   1/1     Running       0               2m32s
+pod/postgres-5bc7579888-6txs9         1/1     Running       0               8m51s
+pod/registry-55485484c5-q8w55         1/1     Running       0               7m37s
+
+NAME                                  DESIRED   CURRENT   READY   AGE
+replicaset.apps/accounts-7c794fd8dc   0         0         0       8m51s
+replicaset.apps/accounts-df996458d    2         2         2       25s
+replicaset.apps/postgres-5bc7579888   1         1         1       8m51s
+replicaset.apps/registry-55485484c5   1         1         1       7m37s
+
+NAME                 TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
+service/accounts     ClusterIP   10.96.124.19    <none>        8080/TCP   8m51s
+service/kubernetes   ClusterIP   10.96.0.1       <none>        443/TCP    11m
+service/postgres     ClusterIP   10.96.162.144   <none>        5432/TCP   8m51s
+service/registry     ClusterIP   10.96.30.67     <none>        5000/TCP   7m37s

@@ -1,0 +1,79 @@
+$ kubectl get deployment,pods,replicasets,services -o wide
+NAME                       READY   UP-TO-DATE   AVAILABLE   AGE     CONTAINERS   IMAGES                            SELECTOR
+deployment.apps/accounts   2/2     2            2           11m     accounts     registry:5000/accounts:capstone   app=accounts
+deployment.apps/postgres   1/1     1            1           11m     postgres     postgres:16-alpine                app=postgres
+deployment.apps/registry   1/1     1            1           9m59s   registry     registry:2                        app=registry
+
+NAME                               READY   STATUS      RESTARTS        AGE     IP            NODE                              NOMINATED NODE   READINESS GATES
+pod/accounts-cd-drr2n-build-pod    0/2     Completed   1 (2m53s ago)   4m6s    10.244.0.24   accounts-capstone-control-plane   <none>           <none>
+pod/accounts-cd-drr2n-clone-pod    0/1     Completed   0               4m54s   10.244.0.22   accounts-capstone-control-plane   <none>           <none>
+pod/accounts-cd-drr2n-deploy-pod   0/4     Completed   0               2m55s   10.244.0.25   accounts-capstone-control-plane   <none>           <none>
+pod/accounts-cd-drr2n-test-pod     0/3     Completed   0               4m44s   10.244.0.23   accounts-capstone-control-plane   <none>           <none>
+pod/accounts-cd-m4g48-build-pod    0/2     Completed   1 (5m43s ago)   7m25s   10.244.0.18   accounts-capstone-control-plane   <none>           <none>
+pod/accounts-cd-m4g48-clone-pod    0/1     Completed   0               8m51s   10.244.0.15   accounts-capstone-control-plane   <none>           <none>
+pod/accounts-cd-m4g48-deploy-pod   0/1     Error       0               5m45s   10.244.0.19   accounts-capstone-control-plane   <none>           <none>
+pod/accounts-cd-m4g48-test-pod     0/3     Completed   0               8m8s    10.244.0.17   accounts-capstone-control-plane   <none>           <none>
+pod/accounts-df996458d-d7mm7       1/1     Running     0               2m47s   10.244.0.26   accounts-capstone-control-plane   <none>           <none>
+pod/accounts-df996458d-mj7w5       1/1     Running     0               2m34s   10.244.0.27   accounts-capstone-control-plane   <none>           <none>
+pod/postgres-5bc7579888-6txs9      1/1     Running     0               11m     10.244.0.12   accounts-capstone-control-plane   <none>           <none>
+pod/registry-55485484c5-q8w55      1/1     Running     0               9m59s   10.244.0.13   accounts-capstone-control-plane   <none>           <none>
+
+NAME                                  DESIRED   CURRENT   READY   AGE     CONTAINERS   IMAGES                            SELECTOR
+replicaset.apps/accounts-7c794fd8dc   0         0         0       11m     accounts     accounts:1.0                      app=accounts,pod-template-hash=7c794fd8dc
+replicaset.apps/accounts-df996458d    2         2         2       2m47s   accounts     registry:5000/accounts:capstone   app=accounts,pod-template-hash=df996458d
+replicaset.apps/postgres-5bc7579888   1         1         1       11m     postgres     postgres:16-alpine                app=postgres,pod-template-hash=5bc7579888
+replicaset.apps/registry-55485484c5   1         1         1       9m59s   registry     registry:2                        app=registry,pod-template-hash=55485484c5
+
+NAME                 TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE     SELECTOR
+service/accounts     ClusterIP   10.96.124.19    <none>        8080/TCP   11m     app=accounts
+service/kubernetes   ClusterIP   10.96.0.1       <none>        443/TCP    13m     <none>
+service/postgres     ClusterIP   10.96.162.144   <none>        5432/TCP   11m     app=postgres
+service/registry     ClusterIP   10.96.30.67     <none>        5000/TCP   9m59s   app=registry
+
+$ kubectl describe deployment accounts
+Name:                   accounts
+Namespace:              default
+CreationTimestamp:      Wed, 28 Oct 2026 23:18:44 +0500
+Labels:                 <none>
+Annotations:            deployment.kubernetes.io/revision: 2
+Selector:               app=accounts
+Replicas:               2 desired | 2 updated | 2 total | 2 available | 0 unavailable
+StrategyType:           RollingUpdate
+MinReadySeconds:        0
+RollingUpdateStrategy:  25% max unavailable, 25% max surge
+Pod Template:
+  Labels:  app=accounts
+  Containers:
+   accounts:
+    Image:      registry:5000/accounts:capstone
+    Port:       8080/TCP
+    Host Port:  0/TCP
+    Limits:
+      cpu:     500m
+      memory:  256Mi
+    Requests:
+      cpu:      100m
+      memory:   128Mi
+    Liveness:   http-get http://:8080/health delay=10s timeout=1s period=10s #success=1 #failure=3
+    Readiness:  http-get http://:8080/health delay=5s timeout=1s period=10s #success=1 #failure=3
+    Environment:
+      DATABASE_URI:  <set to the key 'uri' in secret 'accounts-db'>  Optional: false
+    Mounts:          <none>
+  Volumes:           <none>
+  Node-Selectors:    <none>
+  Tolerations:       <none>
+Conditions:
+  Type           Status  Reason
+  ----           ------  ------
+  Available      True    MinimumReplicasAvailable
+  Progressing    True    NewReplicaSetAvailable
+OldReplicaSets:  accounts-7c794fd8dc (0/0 replicas created)
+NewReplicaSet:   accounts-df996458d (2/2 replicas created)
+Events:
+  Type    Reason             Age    From                   Message
+  ----    ------             ----   ----                   -------
+  Normal  ScalingReplicaSet  11m    deployment-controller  Scaled up replica set accounts-7c794fd8dc from 0 to 2
+  Normal  ScalingReplicaSet  2m47s  deployment-controller  Scaled up replica set accounts-df996458d from 0 to 1
+  Normal  ScalingReplicaSet  2m34s  deployment-controller  Scaled down replica set accounts-7c794fd8dc from 2 to 1
+  Normal  ScalingReplicaSet  2m34s  deployment-controller  Scaled up replica set accounts-df996458d from 1 to 2
+  Normal  ScalingReplicaSet  2m23s  deployment-controller  Scaled down replica set accounts-7c794fd8dc from 1 to 0

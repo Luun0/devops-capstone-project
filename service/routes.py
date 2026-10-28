@@ -29,7 +29,7 @@ def index():
         jsonify(
             name="Account REST API Service",
             version="1.0",
-            # paths=url_for("list_accounts", _external=True),
+            paths=url_for("list_accounts", _external=True),
         ),
         status.HTTP_200_OK,
     )
@@ -50,39 +50,64 @@ def create_accounts():
     account.deserialize(request.get_json())
     account.create()
     message = account.serialize()
-    # Uncomment once get_accounts has been implemented
-    # location_url = url_for("get_accounts", account_id=account.id, _external=True)
-    location_url = "/"  # Remove once get_accounts has been implemented
+    location_url = url_for("get_accounts", account_id=account.id, _external=True)
     return make_response(
         jsonify(message), status.HTTP_201_CREATED, {"Location": location_url}
     )
+
 
 ######################################################################
 # LIST ALL ACCOUNTS
 ######################################################################
 
-# ... place you code here to LIST accounts ...
+@app.route("/accounts", methods=["GET"])
+def list_accounts():
+    """List accounts, optionally filtered by exact customer name."""
+    name = request.args.get("name")
+    accounts = Account.find_by_name(name) if name else Account.all()
+    return jsonify([account.serialize() for account in accounts]), 200
 
 
 ######################################################################
 # READ AN ACCOUNT
 ######################################################################
 
-# ... place you code here to READ an account ...
+@app.route("/accounts/<int:account_id>", methods=["GET"])
+def get_accounts(account_id):
+    """Read an account or return 404."""
+    account = Account.find(account_id)
+    if account is None:
+        abort(404, f"Account {account_id} was not found")
+    return jsonify(account.serialize()), 200
 
 
 ######################################################################
 # UPDATE AN EXISTING ACCOUNT
 ######################################################################
 
-# ... place you code here to UPDATE an account ...
+@app.route("/accounts/<int:account_id>", methods=["PUT"])
+def update_accounts(account_id):
+    """Replace the customer fields of an existing account."""
+    check_content_type("application/json")
+    account = Account.find(account_id)
+    if account is None:
+        abort(404, f"Account {account_id} was not found")
+    account.deserialize(request.get_json())
+    account.update()
+    return jsonify(account.serialize()), 200
 
 
 ######################################################################
 # DELETE AN ACCOUNT
 ######################################################################
 
-# ... place you code here to DELETE an account ...
+@app.route("/accounts/<int:account_id>", methods=["DELETE"])
+def delete_accounts(account_id):
+    """Delete an account; repeated deletion remains successful."""
+    account = Account.find(account_id)
+    if account is not None:
+        account.delete()
+    return "", 204
 
 
 ######################################################################
@@ -93,7 +118,7 @@ def create_accounts():
 def check_content_type(media_type):
     """Checks that the media type is correct"""
     content_type = request.headers.get("Content-Type")
-    if content_type and content_type == media_type:
+    if content_type and request.mimetype == media_type:
         return
     app.logger.error("Invalid Content-Type: %s", content_type)
     abort(

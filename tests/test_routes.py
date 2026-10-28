@@ -123,4 +123,99 @@ class TestAccountService(TestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_415_UNSUPPORTED_MEDIA_TYPE)
 
-    # ADD YOUR TEST CASES HERE ...
+    def test_list_accounts(self):
+        """It should list all accounts and support an empty list."""
+        self.assertEqual(self.client.get(BASE_URL).get_json(), [])
+        self._create_accounts(3)
+        self.assertEqual(len(self.client.get(BASE_URL).get_json()), 3)
+
+    def test_read_account(self):
+        """It should retrieve the created account through its Location."""
+        account = self._create_accounts(1)[0]
+        response = self.client.get(f"{BASE_URL}/{account.id}")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["email"], account.email)
+
+    def test_read_not_found(self):
+        """It should return 404 for an unknown account."""
+        self.assertEqual(self.client.get(f"{BASE_URL}/99999").status_code, 404)
+
+    def test_update_account(self):
+        """It should persist updated fields without changing the ID."""
+        account = self._create_accounts(1)[0]
+        data = account.serialize()
+        data["name"] = "Updated Customer"
+        response = self.client.put(f"{BASE_URL}/{account.id}", json=data)
+        self.assertEqual(response.status_code, 200)
+        result = self.client.get(f"{BASE_URL}/{account.id}").get_json()
+        self.assertEqual(result["name"], "Updated Customer")
+        self.assertEqual(result["id"], account.id)
+
+    def test_update_not_found(self):
+        """It should reject updating an unknown account."""
+        response = self.client.put(f"{BASE_URL}/99999", json={})
+        self.assertEqual(response.status_code, 404)
+
+    def test_update_invalid(self):
+        """It should reject incomplete update data."""
+        account = self._create_accounts(1)[0]
+        self.assertEqual(self.client.put(
+            f"{BASE_URL}/{account.id}", json={}).status_code, 400)
+
+    def test_delete_account(self):
+        """It should delete persistently and be idempotent."""
+        account = self._create_accounts(1)[0]
+        url = f"{BASE_URL}/{account.id}"
+        self.assertEqual(self.client.delete(url).status_code, 204)
+        self.assertEqual(self.client.get(url).status_code, 404)
+        self.assertEqual(self.client.delete(url).status_code, 204)
+
+    def test_filter_name(self):
+        """It should filter accounts by exact name."""
+        account = self._create_accounts(2)[0]
+        response = self.client.get(BASE_URL, query_string={"name": account.name})
+        self.assertEqual(len(response.get_json()), 1)
+
+    def test_security_headers(self):
+        """It should include Talisman response headers."""
+        response = self.client.get(BASE_URL)
+        self.assertEqual(response.headers["X-Content-Type-Options"], "nosniff")
+        self.assertEqual(response.headers["X-Frame-Options"], "SAMEORIGIN")
+        self.assertIn("default-src 'self'", response.headers["Content-Security-Policy"])
+
+    def test_cors_allowed(self):
+        """It should allow only the configured origin."""
+        response = self.client.get(BASE_URL, headers={"Origin": "https://example.com"})
+        self.assertEqual(response.headers["Access-Control-Allow-Origin"], "https://example.com")
+
+    def test_cors_denied(self):
+        """It should omit permission for an untrusted origin."""
+        response = self.client.get(BASE_URL, headers={"Origin": "https://untrusted.invalid"})
+        self.assertNotIn("Access-Control-Allow-Origin", response.headers)
+
+    def test_cors_preflight(self):
+        """It should authorize PUT in a preflight request."""
+        response = self.client.options(BASE_URL, headers={
+            "Origin": "https://example.com", "Access-Control-Request-Method": "PUT"})
+        self.assertIn("PUT", response.headers["Access-Control-Allow-Methods"])
+
+    def test_default_date(self):
+        """It should set today's date when date_joined is omitted."""
+        data = AccountFactory().serialize()
+        data.pop("date_joined")
+        self.assertEqual(self.client.post(BASE_URL, json=data).status_code, 201)
+
+    def test_invalid_date(self):
+        """It should return 400 for an invalid calendar date."""
+        data = AccountFactory().serialize()
+        data["date_joined"] = "invalid"
+        self.assertEqual(self.client.post(BASE_URL, json=data).status_code, 400)
+
+    def test_method_not_allowed(self):
+        """It should return a JSON error for a disallowed method."""
+        self.assertEqual(self.client.patch(BASE_URL).status_code, 405)
+
+    def test_location_is_readable(self):
+        """It should return a usable Location for newly created accounts."""
+        response = self.client.post(BASE_URL, json=AccountFactory().serialize())
+        self.assertEqual(self.client.get(response.headers["Location"]).status_code, 200)

@@ -1,38 +1,36 @@
-#
-# This pipeline needs the following tasks from Tekton Catalog
-#   - git-clone
-#   - flake8
-#
----
-apiVersion: tekton.dev/v1beta1
+apiVersion: tekton.dev/v1
 kind: Pipeline
-metadata:  
+metadata:
   name: cd-pipeline
 spec:
-  workspaces:
-    - name: pipeline-workspace
   params:
     - name: repo-url
-    - name: branch
+    - name: revision
       default: main
+    - name: image
+      default: registry:5000/accounts:capstone
+  workspaces:
+    - name: source
   tasks:
-    - name: init
-      workspaces:
-        - name: source
-          workspace: pipeline-workspace          
-      taskRef:
-        name: cleanup
-
     - name: clone
-      workspaces:
-        - name: output
-          workspace: pipeline-workspace          
-      taskRef:
-        name: git-clone
+      taskRef: {name: clone-source}
       params:
-      - name: url
-        value: $(params.repo-url)
-      - name: revision
-        value: $(params.branch)
-      runAfter:
-        - init
+        - name: repo-url
+          value: $(params.repo-url)
+        - name: revision
+          value: $(params.revision)
+      workspaces: [{name: source, workspace: source}]
+    - name: test
+      runAfter: [clone]
+      taskRef: {name: lint-and-test}
+      workspaces: [{name: source, workspace: source}]
+    - name: build
+      runAfter: [test]
+      taskRef: {name: build-image}
+      params: [{name: image, value: $(params.image)}]
+      workspaces: [{name: source, workspace: source}]
+    - name: deploy
+      runAfter: [build]
+      taskRef: {name: deploy-accounts}
+      params: [{name: image, value: $(params.image)}]
+      workspaces: [{name: source, workspace: source}]

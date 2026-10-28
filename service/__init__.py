@@ -5,6 +5,9 @@ This module creates and configures the Flask app and sets up the logging
 and SQL database
 """
 import sys
+import os
+from flask_talisman import Talisman
+from flask_cors import CORS
 from flask import Flask
 from service import config
 from service.common import log_handlers
@@ -12,6 +15,15 @@ from service.common import log_handlers
 # Create Flask application
 app = Flask(__name__)
 app.config.from_object(config)
+Talisman(
+    app,
+    force_https=os.getenv("FORCE_HTTPS", "false").lower() == "true",
+    content_security_policy={"default-src": "'self'"},
+)
+CORS(app, resources={r"/accounts*": {
+    "origins": os.getenv("CORS_ORIGINS", "https://example.com").split(","),
+    "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+}})
 
 # Import the routes After the Flask app is created
 # pylint: disable=wrong-import-position, cyclic-import, wrong-import-order

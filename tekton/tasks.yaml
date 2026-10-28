@@ -1,52 +1,111 @@
----
-apiVersion: tekton.dev/v1beta1
+apiVersion: tekton.dev/v1
 kind: Task
 metadata:
-  name: echo
+  name: clone-source
 spec:
-  description: This task will echo the message.
   params:
-    - name: message
-      description: The message to echo
-      type: string
-  steps:
-    - name: echo-message
-      image: alpine:3
-      command: [/bin/echo]
-      args: ["$(params.message)"]
----
-apiVersion: tekton.dev/v1beta1
-kind: Task
-metadata:
-  name: cleanup
-spec:
-  description: This task will clean up a workspace by deleting all of the files.
+    - name: repo-url
+    - name: revision
+      default: main
   workspaces:
     - name: source
   steps:
-    - name: remove
-      image: alpine:3
-      env:
-        - name: WORKSPACE_SOURCE_PATH
-          value: $(workspaces.source.path)
+    - name: clone
+      image: alpine/git:2.47.2
       workingDir: $(workspaces.source.path)
-      securityContext:
-        runAsNonRoot: false
-        runAsUser: 0
       script: |
-        #!/usr/bin/env sh
+        #!/bin/sh
         set -eu
-        echo "Removing all files from ${WORKSPACE_SOURCE_PATH} ..."
-        # Delete any existing contents of the directory if it exists.
-        #
-        # We don't just "rm -rf ${WORKSPACE_SOURCE_PATH}" because ${WORKSPACE_SOURCE_PATH} might be "/"
-        # or the root of a mounted volume.
-        if [ -d "${WORKSPACE_SOURCE_PATH}" ] ; then
-          # Delete non-hidden files and directories
-          rm -rf "${WORKSPACE_SOURCE_PATH:?}"/*
-          # Delete files and directories starting with . but excluding ..
-          rm -rf "${WORKSPACE_SOURCE_PATH}"/.[!.]*
-          # Delete files and directories starting with .. plus any other character
-          rm -rf "${WORKSPACE_SOURCE_PATH}"/..?*
-        fi
-
+        git clone --depth 1 --branch "$(params.revision)" "$(params.repo-url)" repo
+        git -C repo log -1 --oneline
+---
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: lint-and-test
+spec:
+  workspaces:
+    - name: source
+  steps:
+    - name: dependencies
+      image: python:3.9-slim
+      workingDir: $(workspaces.source.path)/repo
+      script: |
+        #!/bin/sh
+        set -eu
+        pip install --target /workspace/source/deps -r requirements.txt
+    - name: lint
+      image: python:3.9-slim
+      workingDir: $(workspaces.source.path)/repo
+      env:
+        - name: PYTHONPATH
+          value: /workspace/source/deps
+      script: |
+        #!/bin/sh
+        set -eu
+        python -m flake8 service tests
+    - name: nosetests
+      image: python:3.9-slim
+      workingDir: $(workspaces.source.path)/repo
+      env:
+        - name: PYTHONPATH
+          value: /workspace/source/deps
+        - name: DATABASE_URI
+          value: sqlite:////tmp/test.db
+      script: |
+        #!/bin/sh
+        set -eu
+        python /workspace/source/deps/bin/nosetests
+---
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: build-image
+spec:
+  params:
+    - name: image
+  workspaces:
+    - name: source
+  sidecars:
+    - name: docker
+      image: docker:27-dind
+      securityContext:
+        privileged: true
+      env:
+        - name: DOCKER_TLS_CERTDIR
+          value: ""
+      args: ["--insecure-registry=registry:5000"]
+  steps:
+    - name: build-and-push
+      image: docker:27-cli
+      workingDir: $(workspaces.source.path)/repo
+      env:
+        - name: DOCKER_HOST
+          value: tcp://localhost:2375
+      script: |
+        #!/bin/sh
+        set -eu
+        until docker info >/dev/null 2>&1; do sleep 2; done
+        docker build -t "$(params.image)" .
+        docker push "$(params.image)"
+---
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: deploy-accounts
+spec:
+  params:
+    - name: image
+  workspaces:
+    - name: source
+  steps:
+    - name: deploy
+      image: registry.k8s.io/kubectl:v1.34.1
+      workingDir: $(workspaces.source.path)/repo
+      script: |
+        #!/bin/sh
+        set -eu
+        kubectl apply -f k8s/accounts.yaml
+        kubectl set image deployment/accounts accounts="$(params.image)"
+        kubectl rollout status deployment/accounts --timeout=180s
+        kubectl get deployment,pods,replicaset,service -l app=accounts
